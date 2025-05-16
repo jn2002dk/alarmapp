@@ -1,23 +1,69 @@
 // Vercel Serverless Function
-// Receives tracking data and logs it.
+// Receives tracking data, processes it, and stores it using Vercel Blob.
+
+import { put, head } from '@vercel/blob';
 
 export default async function handler(request, response) {
   if (request.method === 'POST') {
     try {
-      const data = request.body; // Vercel automatically parses JSON body for Node.js functions
-      console.log('Tracking Data Received:', data);
+      const eventData = request.body;
+      const { userId, userName, button, timestamp } = eventData;
 
-      // Here you would typically save the data to a database
-      // For example, using Vercel KV, Vercel Postgres, or an external DB.
-      // For now, we're just logging it to the Vercel function logs.
+      if (!userId || !userName || !button || !timestamp) {
+        return response.status(400).json({ message: 'Missing required event data.' });
+      }
 
-      response.status(200).json({ message: 'Data received successfully', receivedData: data });
+      const userProfilePath = `users/${userId}.json`;
+      let userProfile;
+
+      try {
+        const userBlob = await head(userProfilePath);
+        const existingUserProfileResponse = await fetch(userBlob.url);
+        if (existingUserProfileResponse.ok) {
+          userProfile = await existingUserProfileResponse.json();
+          userProfile.lastActive = timestamp;
+          userProfile.userName = userName;
+        } else {
+          userProfile = {
+            userId,
+            userName,
+            firstSeen: timestamp,
+            lastActive: timestamp,
+          };
+        }
+      } catch (error) {
+        userProfile = {
+          userId,
+          userName,
+          firstSeen: timestamp,
+          lastActive: timestamp,
+        };
+      }
+      
+      await put(userProfilePath, JSON.stringify(userProfile), {
+        access: 'public',
+        contentType: 'application/json',
+      });
+
+      const sanitizedButtonLabel = button.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+      const eventPath = `events/${userId}/${timestamp}-${sanitizedButtonLabel}.json`;
+      await put(eventPath, JSON.stringify(eventData), {
+        access: 'public',
+        contentType: 'application/json',
+      });
+
+      console.log('Tracking Data Processed and Stored:', { userProfilePath, eventPath });
+      response.status(200).json({ 
+        message: 'Data received and stored successfully', 
+        userProfilePath, 
+        eventPath 
+      });
+
     } catch (error) {
-      console.error('Error processing request:', error);
+      console.error('Error processing request with Vercel Blob:', error);
       response.status(500).json({ message: 'Error processing request', error: error.message });
     }
   } else {
-    // Handle any other HTTP methods or return an error
     response.setHeader('Allow', ['POST']);
     response.status(405).end(`Method ${request.method} Not Allowed`);
   }
