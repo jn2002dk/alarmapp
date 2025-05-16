@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import appLogo from './assets/logo.png';
+import EmailPromptModal from './EmailPromptModal'; // Import the modal
 
 // Simple email validation regex
 const EMAIL_REGEX = /\S+@\S+\.\S+/;
@@ -8,68 +9,68 @@ const EMAIL_REGEX = /\S+@\S+\.\S+/;
 function App() {
   const imageUrl = appLogo;
   const [userId, setUserId] = useState(null);
-  const [userEmail, setUserEmail] = useState(null); // Stores the validated email
+  const [userEmail, setUserEmail] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAccessDenied, setIsAccessDenied] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false); // State for modal visibility
 
   useEffect(() => {
     const initializeUser = () => {
       let storedUserId = localStorage.getItem('appUserId');
       let storedUserEmail = localStorage.getItem('appUserEmail');
 
-      const promptForEmail = () => {
-        let emailInput = null;
-        let isValid = false;
-        while (!isValid) {
-          emailInput = window.prompt('Welcome! To use this application, please enter your email address:');
-          if (emailInput === null) { // User pressed Cancel
-            return null; // Indicate cancellation
-          }
-          if (emailInput.trim() === '') {
-            alert('Email address cannot be empty. Please enter a valid email or press Cancel.');
-          } else if (EMAIL_REGEX.test(emailInput)) {
-            isValid = true;
-          } else {
-            alert('Invalid email format. Please enter a valid email address (e.g., user@example.com) or press Cancel.');
-          }
-        }
-        return emailInput;
-      };
-
       if (!storedUserId) {
-        storedUserId = crypto.randomUUID();
-        localStorage.setItem('appUserId', storedUserId);
-        // New user, so email must be prompted
-        storedUserEmail = promptForEmail();
-        if (storedUserEmail === null) {
-          setIsAccessDenied(true);
-          setIsLoading(false);
-          return; // Stop further processing
-        }
-        localStorage.setItem('appUserEmail', storedUserEmail);
+        const newUserId = crypto.randomUUID();
+        localStorage.setItem('appUserId', newUserId);
+        setUserId(newUserId);
+        // New user, so email must be prompted via modal
+        setIsEmailModalOpen(true); 
+        // Don't set isLoading to false yet, wait for modal interaction
       } else {
+        setUserId(storedUserId);
         // User ID exists, check if email exists and is valid
-        // If storedUserEmail is null, empty, or "Anonymous" (from a previous version), re-prompt.
         if (!storedUserEmail || storedUserEmail === 'Anonymous' || !EMAIL_REGEX.test(storedUserEmail)) {
-          storedUserEmail = promptForEmail();
-          if (storedUserEmail === null) {
-            setIsAccessDenied(true);
-            setIsLoading(false);
-            return; // Stop further processing
-          }
-          localStorage.setItem('appUserEmail', storedUserEmail);
+          setIsEmailModalOpen(true);
+          // Don't set isLoading to false yet
+        } else {
+          setUserEmail(storedUserEmail);
+          setIsAccessDenied(false);
+          setIsLoading(false);
+          console.log(`User Initialized: ID - ${storedUserId}, Email - ${storedUserEmail}`);
         }
       }
-
-      setUserId(storedUserId);
-      setUserEmail(storedUserEmail);
-      setIsAccessDenied(false); // Access granted
-      setIsLoading(false);
-      console.log(`User Initialized: ID - ${storedUserId}, Email - ${storedUserEmail}`);
     };
 
     initializeUser();
   }, []); // Empty dependency array ensures this runs only once on mount
+
+  // Callback for when the modal submits an email
+  const handleModalSubmit = (email) => {
+    localStorage.setItem('appUserEmail', email);
+    setUserEmail(email);
+    setIsEmailModalOpen(false);
+    setIsAccessDenied(false);
+    setIsLoading(false);
+    // Ensure userId is set if it was generated just before modal open
+    if (!userId) {
+        const currentUserId = localStorage.getItem('appUserId');
+        setUserId(currentUserId);
+        console.log(`User Initialized/Updated: ID - ${currentUserId}, Email - ${email}`);
+    } else {
+        console.log(`User Initialized/Updated: ID - ${userId}, Email - ${email}`);
+    }
+  };
+
+  // Callback for when the modal is cancelled
+  const handleModalCancel = () => {
+    setIsEmailModalOpen(false);
+    // Deny access only if no valid email was ever stored
+    if (!localStorage.getItem('appUserEmail')) {
+        setIsAccessDenied(true);
+    }
+    setIsLoading(false);
+    console.log('Email prompt cancelled by user.');
+  };
 
   const buttons = [
     { id: 1, label: 'Button 1' },
@@ -110,8 +111,19 @@ function App() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !isEmailModalOpen) { // Show loading only if modal is not also trying to open
     return <div className="status-message">Loading...</div>;
+  }
+
+  // Render Modal if needed, it will overlay anything else or be the first thing shown
+  if (isEmailModalOpen) {
+    return (
+      <EmailPromptModal 
+        isOpen={isEmailModalOpen} 
+        onSubmit={handleModalSubmit} 
+        onCancel={handleModalCancel} 
+      />
+    );
   }
 
   if (isAccessDenied) {
