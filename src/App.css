@@ -43,7 +43,7 @@
   font-size: 1rem;
   border: none; /* Remove default border */
   border-radius: 8px; /* Rounded corners */
-  background-color: #007bff; /* Primary button color */
+  background-color: #6d5078; /* Primary button color */
   color: white;
   cursor: pointer;
   transition: background-color 0.3s ease;
@@ -51,7 +51,7 @@
 }
 
 .grid-button:hover {
-  background-color: #0056b3; /* Darker shade on hover */
+  background-color: #d6c3dd; /* Darker shade on hover */
 }
 
 /* Remove default Vite styles if not needed */
