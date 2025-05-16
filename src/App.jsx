@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import appLogo from './assets/logo.png';
 import EmailPromptModal from './EmailPromptModal'; // Import the modal
+import ConfirmationModal from './ConfirmationModal'; // Import the confirmation modal
 
 // Simple email validation regex
 const EMAIL_REGEX = /\S+@\S+\.\S+/;
@@ -13,6 +14,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAccessDenied, setIsAccessDenied] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false); // State for modal visibility
+  const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal visibility
+  const [confirmationModalMessage, setConfirmationModalMessage] = useState(''); // Message for confirmation modal
+  const [currentButtonAction, setCurrentButtonAction] = useState(null); // Current button action for confirmation modal
 
   useEffect(() => {
     const initializeUser = () => {
@@ -73,23 +77,29 @@ function App() {
   };
 
   const buttons = [
-    { id: 1, label: 'Button 1' },
-    { id: 2, label: 'Button 2' },
-    { id: 3, label: 'Button 3' },
-    { id: 4, label: 'Button 4' },
-    { id: 5, label: 'Button 5' },
-    { id: 6, label: 'Button 6' },
+    { id: 1, label: 'Hovedbygning' },
+    { id: 2, label: 'MEB' },
+    { id: 3, label: 'GSB' },
+    { id: 4, label: 'Anneks' },
+    { id: 5, label: 'Musik' },
+    { id: 6, label: 'New gym' },
   ];
 
-  const handleButtonClick = async (buttonLabel) => {
-    if (userId && userEmail && !isAccessDenied) {
+  const handleButtonClick = (buttonLabel) => {
+    if (!userId || !userEmail) {
+      console.error('User ID or email not found.');
+      return;
+    }
+
+    setConfirmationModalMessage(`Are you sure you want to activate ${buttonLabel}?`);
+    setCurrentButtonAction(() => async () => {
+      console.log(`Button ${buttonLabel} pressed. Sending data...`);
       const eventData = {
         userId,
         userEmail: userEmail,
         button: buttonLabel,
         timestamp: new Date().toISOString(),
       };
-      console.log(`Button Clicked: ${buttonLabel}, User ID: ${userId}, User Email: ${userEmail}`);
 
       try {
         const response = await fetch('/api/trackEvent', {
@@ -106,9 +116,21 @@ function App() {
       } catch (error) {
         console.error('Error sending tracking data:', error);
       }
-    } else {
-      console.log('User ID, Email not available, or access denied. Cannot track event.');
+      setIsConfirmationModalOpen(false);
+    });
+    setIsConfirmationModalOpen(true);
+  };
+
+  const handleConfirm = () => {
+    if (currentButtonAction) {
+      currentButtonAction();
     }
+  };
+
+  const handleCancel = () => {
+    setIsConfirmationModalOpen(false);
+    setCurrentButtonAction(null);
+    console.log('Action cancelled.');
   };
 
   if (isLoading && !isEmailModalOpen) { // Show loading only if modal is not also trying to open
@@ -150,6 +172,12 @@ function App() {
           </button>
         ))}
       </div>
+      <ConfirmationModal 
+        isOpen={isConfirmationModalOpen}
+        message={confirmationModalMessage}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }
