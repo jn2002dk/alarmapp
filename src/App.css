@@ -3,7 +3,7 @@
   margin: 10px; /* Added 10px margin around the app */
   padding: 0; /* Removed padding for edge-to-edge content */
   text-align: center;
-  background-color: #f0f2f5; /* Light grey background for a modern feel */
+  background-color: #ffffff; /* Light grey background for a modern feel */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -52,6 +52,8 @@
 
 .grid-button:hover {
   background-color: #d6c3dd; /* Darker shade on hover */
+  color: #000000; /* Text color on hover */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Slightly larger shadow on hover */
 }
 
 /* Remove default Vite styles if not needed */
