@@ -61,3 +61,14 @@
 .read-the-docs {
   display: none;
 }
+
+.status-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh; /* Take up most of the screen */
+  font-size: 1.2em;
+  color: #555;
+  padding: 2rem;
+  text-align: center;
+}
