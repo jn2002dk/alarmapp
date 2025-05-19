@@ -55,10 +55,12 @@ export default async function handler(request, response) {
       // Special action for button 1 (Hovedbygning)
       if (button === 'Hovedbygning') {
         try {
-          await fetch('https://clevertouchlive.com/actions/68185bfe588ebd9c23003abc/public_execute?hash=fff61042299798ba229bacf23aa9d4f8', {
+          const extRes = await fetch('https://clevertouchlive.com/actions/68185bfe588ebd9c23003abc/public_execute?hash=fff61042299798ba229bacf23aa9d4f8', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
           });
-          console.log('External action triggered for Hovedbygning');
+          const extText = await extRes.text();
+          console.log('External action triggered for Hovedbygning', extRes.status, extText);
         } catch (err) {
           console.error('Failed to trigger external action:', err);
         }
