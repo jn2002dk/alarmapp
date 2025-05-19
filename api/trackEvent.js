@@ -2,6 +2,7 @@
 // Receives tracking data, processes it, and stores it using Vercel Blob.
 
 import { put, head } from '@vercel/blob';
+import fetch from 'node-fetch';
 
 export default async function handler(request, response) {
   if (request.method === 'POST') {
