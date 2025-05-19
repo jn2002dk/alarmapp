@@ -96,7 +96,7 @@ function App() {
       console.log(`Button ${buttonLabel} pressed. Sending data...`);
       const eventData = {
         userId,
-        userEmail: userEmail,
+        userName: userEmail, // Use userName to match backend expectation
         button: buttonLabel,
         timestamp: new Date().toISOString(),
       };
