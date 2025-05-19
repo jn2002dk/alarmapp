@@ -43,6 +43,7 @@ export default async function handler(request, response) {
       await put(userProfilePath, JSON.stringify(userProfile), {
         access: 'public',
         contentType: 'application/json',
+        allowOverwrite: true,
       });
 
       const sanitizedButtonLabel = button.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
