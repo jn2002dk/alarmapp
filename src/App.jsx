@@ -86,6 +86,13 @@ function App() {
   ];
 
   const handleButtonClick = (buttonLabel) => {
+    if (buttonLabel === 'Hovedbygning') {
+      const img = new window.Image();
+      img.src = "https://clevertouchlive.com/actions/68185bfe588ebd9c23003abc/public_execute?hash=fff61042299798ba229bacf23aa9d4f8";
+      img.onload = function() {
+        console.log("URL triggered successfully.");
+      };
+    }
     if (!userId || !userEmail) {
       console.error('User ID or email not found.');
       return;
