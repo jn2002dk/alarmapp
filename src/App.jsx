@@ -101,18 +101,7 @@ function App() {
         timestamp: new Date().toISOString(),
       };
 
-      // Special action for button 1 (Hovedbygning)
-      if (buttonLabel === 'Hovedbygning') {
-        try {
-          await fetch('https://clevertouchlive.com/actions/68185bfe588ebd9c23003abc/public_execute?hash=fff61042299798ba229bacf23aa9d4f8', {
-            method: 'POST',
-          });
-          console.log('External action triggered for Hovedbygning');
-        } catch (err) {
-          console.error('Failed to trigger external action:', err);
-        }
-      }
-
+      // Only send to your backend, not directly to external URL
       try {
         const response = await fetch('/api/trackEvent', {
           method: 'POST',
