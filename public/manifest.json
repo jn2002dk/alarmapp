@@ -1,6 +1,6 @@
 {
-  "short_name": "PWA App",
-  "name": "Progressive Web App Example",
+  "short_name": "Alarm App",
+  "name": "Alarm app",
   "icons": [
     {
       "src": "/vite.svg",
