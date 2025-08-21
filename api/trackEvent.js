@@ -8,10 +8,10 @@ export default async function handler(request, response) {
   if (request.method === 'POST') {
     try {
       const eventData = request.body;
-      const { userId, userName, button, timestamp } = eventData;
+      const { userId, userName, button, timestamp, deviceToken } = eventData;
 
-      if (!userId || !userName || !button || !timestamp) {
-        return response.status(400).json({ message: 'Missing required event data.' });
+      if (!userId || !userName || !button || !timestamp || !deviceToken) {
+        return response.status(400).json({ message: 'Missing required event data. deviceToken required.' });
       }
 
       const userProfilePath = `users/${userId}.json`;
@@ -22,6 +22,12 @@ export default async function handler(request, response) {
         const existingUserProfileResponse = await fetch(userBlob.url);
         if (existingUserProfileResponse.ok) {
           userProfile = await existingUserProfileResponse.json();
+          // Validate device token
+          if (!userProfile.deviceToken || userProfile.deviceToken !== deviceToken) {
+            console.warn('Device token mismatch for user', userId);
+            return response.status(403).json({ message: 'Invalid device token.' });
+          }
+          // Update server-side lastActive and username
           userProfile.lastActive = timestamp;
           userProfile.userName = userName;
         } else {
@@ -30,27 +36,32 @@ export default async function handler(request, response) {
             userName,
             firstSeen: timestamp,
             lastActive: timestamp,
+            deviceToken: deviceToken,
           };
         }
       } catch (error) {
+        // If profile doesn't exist, create it but require token to be present
         userProfile = {
           userId,
           userName,
           firstSeen: timestamp,
           lastActive: timestamp,
+          deviceToken: deviceToken,
         };
       }
       
       await put(userProfilePath, JSON.stringify(userProfile), {
-        access: 'public',
+        access: 'private',
         contentType: 'application/json',
         allowOverwrite: true,
       });
 
       const sanitizedButtonLabel = button.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
-      const eventPath = `events/${userId}/${timestamp}-${sanitizedButtonLabel}.json`;
-      await put(eventPath, JSON.stringify(eventData), {
-        access: 'public',
+      const serverTs = new Date().toISOString();
+      const eventPath = `events/${userId}/${serverTs}-${sanitizedButtonLabel}.json`;
+      const eventToStore = { ...eventData, serverTs };
+      await put(eventPath, JSON.stringify(eventToStore), {
+        access: 'private',
         contentType: 'application/json',
       });
 

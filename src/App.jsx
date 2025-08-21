@@ -5,7 +5,7 @@ import EmailPromptModal from './EmailPromptModal'; // Import the modal
 import ConfirmationModal from './ConfirmationModal'; // Import the confirmation modal
 
 // Simple email validation regex
-const EMAIL_REGEX = /\S+@\S+\.\S+/;
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@rygaards\.com$/i;
 
 function App() {
   const imageUrl = appLogo;
@@ -52,6 +52,29 @@ function App() {
   const handleModalSubmit = (email) => {
     localStorage.setItem('appUserEmail', email);
     setUserEmail(email);
+    // Register device with backend to receive a deviceToken
+    (async () => {
+      try {
+        const uid = userId || localStorage.getItem('appUserId');
+        const res = await fetch('/api/registerUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uid, userEmail: email, timestamp: new Date().toISOString() }),
+        });
+        if (res.ok) {
+          const body = await res.json();
+          if (body && body.deviceToken) {
+            localStorage.setItem('appDeviceToken', body.deviceToken);
+            console.log('Device registered and token stored');
+          }
+        } else {
+          console.error('Failed to register device:', res.status, await res.text());
+        }
+      } catch (err) {
+        console.error('Error registering device:', err);
+      }
+    })();
+
     setIsEmailModalOpen(false);
     setIsAccessDenied(false);
     setIsLoading(false);
@@ -101,11 +124,13 @@ function App() {
     setConfirmationModalMessage(`Are you sure you want to activate ${buttonLabel}?`);
     setCurrentButtonAction(() => async () => {
       console.log(`Button ${buttonLabel} pressed. Sending data...`);
+      const deviceToken = localStorage.getItem('appDeviceToken');
       const eventData = {
         userId,
         userName: userEmail, // Use userName to match backend expectation
         button: buttonLabel,
         timestamp: new Date().toISOString(),
+        deviceToken,
       };
 
       // Only send to your backend, not directly to external URL
