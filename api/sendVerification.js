@@ -48,11 +48,53 @@ export default async function handler(request, response) {
         allowOverwrite: true,
       });
 
-      // TODO: Integrate with an email provider to send the code to userEmail.
-      // For now, log the code on the server logs (useful for test/dev deployments).
-      console.log(`Verification code for ${userEmail} (${userId}): ${code} (expires ${expiresAt})`);
+      // Try to send via SendGrid if configured
+      const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+      const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.SENDGRID_SENDER || null;
+      let sendResult = { sent: false };
 
-      return response.status(200).json({ ok: true });
+      if (SENDGRID_API_KEY && SENDER_EMAIL) {
+        try {
+          const mail = {
+            personalizations: [
+              {
+                to: [{ email: userEmail }],
+                subject: 'Your verification code',
+              },
+            ],
+            from: { email: SENDER_EMAIL },
+            content: [
+              { type: 'text/plain', value: `Your verification code is: ${code}\nIt will expire at ${expiresAt}.` },
+            ],
+          };
+
+          const sgRes = await fetch('https://api.sendgrid.com/v3/mail/send', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${SENDGRID_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(mail),
+          });
+
+          if (!sgRes.ok) {
+            const txt = await sgRes.text();
+            console.error('SendGrid send failed:', sgRes.status, txt);
+            sendResult = { sent: false, error: txt };
+          } else {
+            sendResult = { sent: true };
+          }
+        } catch (err) {
+          console.error('SendGrid error:', err);
+          sendResult = { sent: false, error: err.message };
+        }
+      } else {
+        // No email provider configured; log code for dev/testing
+        console.log(`Verification code for ${userEmail} (${userId}): ${code} (expires ${expiresAt})`);
+        sendResult = { sent: false, fallbackLogged: true };
+      }
+
+      return response.status(200).json({ ok: true, sendResult });
     } catch (error) {
       console.error('sendVerification error:', error);
       return response.status(500).json({ message: 'Error generating verification code', error: error.message });
