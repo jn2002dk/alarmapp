@@ -3,7 +3,10 @@
 
 import { put, head } from '@vercel/blob';
 import fetch from 'node-fetch';
-import crypto from 'crypto';
+
+// registerUser now creates/updates the user profile and marks verification pending.
+// It no longer issues a deviceToken directly. Instead, `sendVerification` will place a code
+// in the profile and `verifyEmail` will issue the deviceToken after successful verification.
 
 export default async function handler(request, response) {
   if (request.method === 'POST') {
@@ -16,18 +19,13 @@ export default async function handler(request, response) {
       const ts = timestamp || new Date().toISOString();
       const userProfilePath = `users/${userId}.json`;
 
-      // Create a strong random device token
-      const deviceToken = crypto.randomBytes(32).toString('hex');
-
       let userProfile = {
         userId,
         userName: userEmail,
-        deviceToken,
         firstSeen: ts,
         lastActive: ts,
       };
 
-      // If a profile already exists, preserve firstSeen and update lastActive & username & deviceToken
       try {
         const userBlob = await head(userProfilePath);
         const existingUserProfileResponse = await fetch(userBlob.url);
@@ -36,11 +34,15 @@ export default async function handler(request, response) {
           userProfile.firstSeen = existing.firstSeen || userProfile.firstSeen;
           userProfile.lastActive = ts;
           userProfile.userName = userEmail;
-          userProfile.deviceToken = deviceToken; // rotate token on register
+          // preserve deviceToken if present
+          if (existing.deviceToken) userProfile.deviceToken = existing.deviceToken;
         }
       } catch (err) {
-        // no-op, will write new profile
+        // no existing profile
       }
+
+      // Mark that verification is pending on client side; actual code is created by /api/sendVerification
+      userProfile.verificationPending = true;
 
       await put(userProfilePath, JSON.stringify(userProfile), {
         access: 'private',
@@ -48,7 +50,7 @@ export default async function handler(request, response) {
         allowOverwrite: true,
       });
 
-      return response.status(200).json({ ok: true, deviceToken });
+      return response.status(200).json({ ok: true });
     } catch (error) {
       console.error('registerUser error:', error);
       return response.status(500).json({ message: 'Error registering user', error: error.message });

@@ -3,6 +3,7 @@ import './App.css';
 import appLogo from './assets/logo.png';
 import EmailPromptModal from './EmailPromptModal'; // Import the modal
 import ConfirmationModal from './ConfirmationModal'; // Import the confirmation modal
+import VerifyEmailModal from './VerifyEmailModal';
 
 // Simple email validation regex
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@rygaards\.com$/i;
@@ -15,6 +16,7 @@ function App() {
   const [isAccessDenied, setIsAccessDenied] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false); // State for modal visibility
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal visibility
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [confirmationModalMessage, setConfirmationModalMessage] = useState(''); // Message for confirmation modal
   const [currentButtonAction, setCurrentButtonAction] = useState(null); // Current button action for confirmation modal
 
@@ -56,20 +58,30 @@ function App() {
     (async () => {
       try {
         const uid = userId || localStorage.getItem('appUserId');
-        const res = await fetch('/api/registerUser', {
+        // Register user profile (marks verification pending)
+        const regRes = await fetch('/api/registerUser', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: uid, userEmail: email, timestamp: new Date().toISOString() }),
         });
-        if (res.ok) {
-          const body = await res.json();
-          if (body && body.deviceToken) {
-            localStorage.setItem('appDeviceToken', body.deviceToken);
-            console.log('Device registered and token stored');
-          }
-        } else {
-          console.error('Failed to register device:', res.status, await res.text());
+        if (!regRes.ok) {
+          console.error('Failed to register user:', regRes.status, await regRes.text());
+          return;
         }
+
+        // Trigger sending verification code to the email
+        const sendRes = await fetch('/api/sendVerification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uid, userEmail: email }),
+        });
+        if (!sendRes.ok) {
+          console.error('Failed to request verification code:', sendRes.status, await sendRes.text());
+          return;
+        }
+
+        // Open verification modal so user can enter the code
+        setIsVerifyModalOpen(true);
       } catch (err) {
         console.error('Error registering device:', err);
       }
@@ -97,6 +109,18 @@ function App() {
     }
     setIsLoading(false);
     console.log('Email prompt cancelled by user.');
+  };
+
+  const handleVerified = (deviceToken) => {
+    setIsVerifyModalOpen(false);
+    if (deviceToken) {
+      localStorage.setItem('appDeviceToken', deviceToken);
+      console.log('Email verified and device token stored');
+      setIsAccessDenied(false);
+      setIsLoading(false);
+    } else {
+      console.warn('Email verified but no device token returned');
+    }
   };
 
   const buttons = [
@@ -178,6 +202,13 @@ function App() {
         onSubmit={handleModalSubmit} 
         onCancel={handleModalCancel} 
       />
+    );
+  }
+
+  if (isVerifyModalOpen) {
+    const uid = userId || localStorage.getItem('appUserId');
+    return (
+      <VerifyEmailModal isOpen={isVerifyModalOpen} userId={uid} onVerified={handleVerified} onCancel={() => setIsVerifyModalOpen(false)} />
     );
   }
 
