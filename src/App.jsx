@@ -4,6 +4,7 @@ import appLogo from './assets/logo.png';
 import EmailPromptModal from './EmailPromptModal'; // Import the modal
 import ConfirmationModal from './ConfirmationModal'; // Import the confirmation modal
 import VerifyEmailModal from './VerifyEmailModal';
+import Admin from './Admin';
 
 // Simple email validation regex
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@rygaards\.com$/i;
@@ -17,6 +18,7 @@ function App() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false); // State for modal visibility
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal visibility
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [confirmationModalMessage, setConfirmationModalMessage] = useState(''); // Message for confirmation modal
   const [currentButtonAction, setCurrentButtonAction] = useState(null); // Current button action for confirmation modal
 
@@ -223,6 +225,9 @@ function App() {
 
   return (
     <div className="app-container">
+      <div className="top-right-controls">
+        <button className="admin-toggle" onClick={() => setIsAdminOpen(true)}>Admin</button>
+      </div>
       <img src={imageUrl} alt="App Header" className="app-header-image" />
       {userEmail && <p className="welcome-message">Welcome, {userEmail} (ID: {userId})</p>}
       <div className="button-grid">
@@ -242,6 +247,7 @@ function App() {
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />
+  <Admin isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />
     </div>
   );
 }

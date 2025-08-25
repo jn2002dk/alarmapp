@@ -50,6 +50,29 @@ export default async function handler(request, response) {
         allowOverwrite: true,
       });
 
+      // Maintain a lightweight index of userIds for admin listing
+      const indexPath = `users/index.json`;
+      try {
+        let index = [];
+        try {
+          const idxBlob = await head(indexPath);
+          const idxRes = await fetch(idxBlob.url);
+          if (idxRes.ok) {
+            index = await idxRes.json();
+          }
+        } catch (err) {
+          // no index yet
+        }
+        if (!index.includes(userId)) index.push(userId);
+        await put(indexPath, JSON.stringify(index), {
+          access: 'private',
+          contentType: 'application/json',
+          allowOverwrite: true,
+        });
+      } catch (err) {
+        console.error('Failed to update users index:', err);
+      }
+
       return response.status(200).json({ ok: true });
     } catch (error) {
       console.error('registerUser error:', error);
